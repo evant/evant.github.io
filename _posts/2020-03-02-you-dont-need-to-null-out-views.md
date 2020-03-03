@@ -10,7 +10,7 @@ The trick is to scope all view interactions to `onViewCreated()`.
 ```kotlin
 class MyFragment : Fragment(R.layout.my_fragment) {
   override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-    val binding = MyBinding.bind(view)
+    val binding = MyFragmentBinding.bind(view)
     binding.text = "Look, no leaks!"
   }
 }
@@ -37,7 +37,7 @@ example, you can listen to liveData:
 
 ```kotlin
 override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-  val binding = MyBinding.bind(view)
+  val binding = MyFragmentBinding.bind(view)
   viewModel.title.observe(viewLifecycleOwner) { text -> binding.text = text }
 }
 ```
@@ -48,7 +48,7 @@ operation:
 
 ```kotlin
 override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-  val binding = MyBinding.bind(view)
+  val binding = MyFragmentBinding.bind(view)
   viewLifecycleOwner.lifecycleScope.launchWhenStarted {
     viewModel.title.collect { text -> binding.text = text } 
   }
@@ -62,7 +62,7 @@ If you need to handle view-related things in other lifecycle events like
 
 ```kotlin
 override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-  val binding = MyBinding.bind(view)
+  val binding = MyFragmentBinding.bind(view)
   viewLifecycleOwner.lifecycle.addObserver(object: DefaultLifecycleObserver {
     override fun onResume(owner: LifecycleOwner) {
       Snackbar.make(view, "OnResume Called", Snackbar.LENGTH_LONG).show()
@@ -86,7 +86,7 @@ with live data:
 private val showCamera = MutableLiveData<Event<Boolean>>()
 
 override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-  val binding = MyBinding.bind(view)
+  val binding = MyFragmentBinding.bind(view)
 
   showCamera.observe(viewLivecycleOwner) { event ->
     event.getContentIfNotHandled()?.let { permission ->
@@ -124,7 +124,7 @@ Or use a [Channel](https://kotlinlang.org/docs/reference/coroutines/channels.htm
 private val showCamera = Channel<Boolean>(1)
 
 override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-  val binding = MyBinding.bind(view)
+  val binding = MyFragmentBinding.bind(view)
 
   viewLifecycleOwner.lifecycleScope.launchWhenStarted {
     for (permission in showCamera) {
