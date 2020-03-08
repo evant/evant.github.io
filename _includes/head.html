@@ -28,6 +28,7 @@
       });
     </script>
   {% endif %}
+  <script async src="https://www.googletagmanager.com/gtag/js?id=UA-160017120-1"></script>
 
   <script>
   function wrap_img(fn) {
@@ -49,6 +50,16 @@
     } else { document.addEventListener('DOMContentLoaded', fn); }
   }
   window.onload = wrap_img;
+    
+  var _doNotTrack = navigator.doNotTrack ?
+        navigator.doNotTrack === "1" || navigator.doNotTrack === "yes": 
+        (window.doNotTrack? window.doNotTrack === "1": false);
+  if (!_doNotTrack){
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'UA-160017120-1');
+  }
   </script>
 
 </head>
