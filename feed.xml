@@ -1,0 +1,385 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"><generator uri="https://jekyllrb.com/" version="3.9.0">Jekyll</generator><link href="https://evan.tatarka.me/feed.xml" rel="self" type="application/atom+xml"/><link href="https://evan.tatarka.me/" rel="alternate" type="text/html"/><updated>2020-08-21T13:55:29+00:00</updated><id>https://evan.tatarka.me/feed.xml</id><title type="html">evant</title><subtitle>Opinions expressed here are my own, not those of my company.</subtitle><entry><title type="html">You Don’t Need to Null Out Views</title><link href="https://evan.tatarka.me/2020/03/02/you-dont-need-to-null-out-views.html" rel="alternate" type="text/html" title="You Don’t Need to Null Out Views"/><published>2020-03-02T00:00:00+00:00</published><updated>2020-03-02T00:00:00+00:00</updated><id>https://evan.tatarka.me/2020/03/02/you-dont-need-to-null-out-views</id><content type="html" xml:base="https://evan.tatarka.me/2020/03/02/you-dont-need-to-null-out-views.html">&lt;p&gt;There’s been a long standing footgun when using fragments on Android because
+the fragment may live longer than it’s views. Solutions to this have ranged
+from ignoring the problem to some complicated rxjava setup. However, with the
+additions to AndroidX this is no longer necessary!&lt;/p&gt;
+
+&lt;p&gt;The trick is to scope all view interactions to &lt;code class="language-plaintext highlighter-rouge"&gt;onViewCreated()&lt;/code&gt;.&lt;/p&gt;
+
+&lt;div class="language-kotlin highlighter-rouge"&gt;&lt;div class="highlight"&gt;&lt;pre class="highlight"&gt;&lt;code&gt;&lt;span class="kd"&gt;class&lt;/span&gt; &lt;span class="nc"&gt;MyFragment&lt;/span&gt; &lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nc"&gt;Fragment&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nc"&gt;R&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;layout&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;my_fragment&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+  &lt;span class="k"&gt;override&lt;/span&gt; &lt;span class="k"&gt;fun&lt;/span&gt; &lt;span class="nf"&gt;onViewCreated&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;view&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nc"&gt;View&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;savedInstanceState&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nc"&gt;Bundle&lt;/span&gt;&lt;span class="p"&gt;?)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="kd"&gt;val&lt;/span&gt; &lt;span class="py"&gt;binding&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="nc"&gt;MyFragmentBinding&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;bind&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;view&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="n"&gt;binding&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;text&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="s"&gt;"Look, no leaks!"&lt;/span&gt;
+  &lt;span class="p"&gt;}&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;If you don’t assign any views to fragment fields, you don’t need to worry about
+clearing them out.&lt;/p&gt;
+
+&lt;p&gt;Sidenote: if you are not familiar with some of the features here, check out the
+&lt;a href="https://developer.android.com/reference/androidx/fragment/app/Fragment#Fragment(int)"&gt;new fragment
+constructor&lt;/a&gt;
+and &lt;a href="https://developer.android.com/topic/libraries/view-binding"&gt;view binding&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Now, you may be wondering how you are supposed to accomplish much with this
+limited scope, but with a few other AndroidX features it turns out you can do
+quite a lot.&lt;/p&gt;
+
+&lt;h2 id="listening-for-updates"&gt;Listening for updates&lt;/h2&gt;
+
+&lt;p&gt;The other key part to this is
+&lt;a href="https://developer.android.com/reference/androidx/fragment/app/Fragment#getViewLifecycleOwner()"&gt;viewLifecycleOwner&lt;/a&gt;.
+This gives you a scope that you can use for asynchronous operations. For
+example, you can listen to liveData:&lt;/p&gt;
+
+&lt;div class="language-kotlin highlighter-rouge"&gt;&lt;div class="highlight"&gt;&lt;pre class="highlight"&gt;&lt;code&gt;&lt;span class="k"&gt;override&lt;/span&gt; &lt;span class="k"&gt;fun&lt;/span&gt; &lt;span class="nf"&gt;onViewCreated&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;view&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nc"&gt;View&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;savedInstanceState&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nc"&gt;Bundle&lt;/span&gt;&lt;span class="p"&gt;?)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+  &lt;span class="kd"&gt;val&lt;/span&gt; &lt;span class="py"&gt;binding&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="nc"&gt;MyFragmentBinding&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;bind&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;view&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+  &lt;span class="n"&gt;viewModel&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;title&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;observe&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;viewLifecycleOwner&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt; &lt;span class="n"&gt;text&lt;/span&gt; &lt;span class="p"&gt;-&amp;gt;&lt;/span&gt; &lt;span class="n"&gt;binding&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;text&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="n"&gt;text&lt;/span&gt; &lt;span class="p"&gt;}&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Or scope a
+coroutine/&lt;a href="https://kotlinlang.org/docs/reference/coroutines/flow.html"&gt;Flow&lt;/a&gt;
+operation:&lt;/p&gt;
+
+&lt;div class="language-kotlin highlighter-rouge"&gt;&lt;div class="highlight"&gt;&lt;pre class="highlight"&gt;&lt;code&gt;&lt;span class="k"&gt;override&lt;/span&gt; &lt;span class="k"&gt;fun&lt;/span&gt; &lt;span class="nf"&gt;onViewCreated&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;view&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nc"&gt;View&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;savedInstanceState&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nc"&gt;Bundle&lt;/span&gt;&lt;span class="p"&gt;?)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+  &lt;span class="kd"&gt;val&lt;/span&gt; &lt;span class="py"&gt;binding&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="nc"&gt;MyFragmentBinding&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;bind&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;view&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+  &lt;span class="n"&gt;viewLifecycleOwner&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;lifecycleScope&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;launchWhenStarted&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="n"&gt;viewModel&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;title&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;collect&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt; &lt;span class="n"&gt;text&lt;/span&gt; &lt;span class="p"&gt;-&amp;gt;&lt;/span&gt; &lt;span class="n"&gt;binding&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;text&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="n"&gt;text&lt;/span&gt; &lt;span class="p"&gt;}&lt;/span&gt; 
+  &lt;span class="p"&gt;}&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h2 id="lifecycle-events"&gt;Lifecycle Events&lt;/h2&gt;
+
+&lt;p&gt;If you need to handle view-related things in other lifecycle events like
+&lt;code class="language-plaintext highlighter-rouge"&gt;onPause/onResume&lt;/code&gt;, you can attach your own &lt;code class="language-plaintext highlighter-rouge"&gt;LifecycleObserver&lt;/code&gt;.&lt;/p&gt;
+
+&lt;div class="language-kotlin highlighter-rouge"&gt;&lt;div class="highlight"&gt;&lt;pre class="highlight"&gt;&lt;code&gt;&lt;span class="k"&gt;override&lt;/span&gt; &lt;span class="k"&gt;fun&lt;/span&gt; &lt;span class="nf"&gt;onViewCreated&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;view&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nc"&gt;View&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;savedInstanceState&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nc"&gt;Bundle&lt;/span&gt;&lt;span class="p"&gt;?)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+  &lt;span class="kd"&gt;val&lt;/span&gt; &lt;span class="py"&gt;binding&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="nc"&gt;MyFragmentBinding&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;bind&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;view&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+  &lt;span class="n"&gt;viewLifecycleOwner&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;lifecycle&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;addObserver&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="k"&gt;object&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nc"&gt;DefaultLifecycleObserver&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="k"&gt;override&lt;/span&gt; &lt;span class="k"&gt;fun&lt;/span&gt; &lt;span class="nf"&gt;onResume&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;owner&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nc"&gt;LifecycleOwner&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+      &lt;span class="nc"&gt;Snackbar&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;make&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;view&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;"OnResume Called"&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nc"&gt;Snackbar&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nc"&gt;LENGTH_LONG&lt;/span&gt;&lt;span class="p"&gt;).&lt;/span&gt;&lt;span class="nf"&gt;show&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+    &lt;span class="p"&gt;}&lt;/span&gt;
+  &lt;span class="p"&gt;})&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h2 id="other-callbacks"&gt;Other Callbacks&lt;/h2&gt;
+
+&lt;p&gt;The one place where this gets more tricky is if you need to handle other
+callbacks that haven’t yet been broken out by AndroidX. For example, runtime
+permissions. In these cases, I would recommend routing the event in a way you
+can react to it.&lt;/p&gt;
+
+&lt;p&gt;For example, you could use an &lt;a href="https://medium.com/androiddevelopers/livedata-with-snackbar-navigation-and-other-events-the-singleliveevent-case-ac2622673150#0e87"&gt;event
+wrapper&lt;/a&gt;
+with live data:&lt;/p&gt;
+
+&lt;div class="language-kotlin highlighter-rouge"&gt;&lt;div class="highlight"&gt;&lt;pre class="highlight"&gt;&lt;code&gt;&lt;span class="k"&gt;private&lt;/span&gt; &lt;span class="kd"&gt;val&lt;/span&gt; &lt;span class="py"&gt;showCamera&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="nc"&gt;MutableLiveData&lt;/span&gt;&lt;span class="p"&gt;&amp;lt;&lt;/span&gt;&lt;span class="nc"&gt;Event&lt;/span&gt;&lt;span class="p"&gt;&amp;lt;&lt;/span&gt;&lt;span class="nc"&gt;Boolean&lt;/span&gt;&lt;span class="p"&gt;&amp;gt;&amp;gt;()&lt;/span&gt;
+
+&lt;span class="k"&gt;override&lt;/span&gt; &lt;span class="k"&gt;fun&lt;/span&gt; &lt;span class="nf"&gt;onViewCreated&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;view&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nc"&gt;View&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;savedInstanceState&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nc"&gt;Bundle&lt;/span&gt;&lt;span class="p"&gt;?)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+  &lt;span class="kd"&gt;val&lt;/span&gt; &lt;span class="py"&gt;binding&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="nc"&gt;MyFragmentBinding&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;bind&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;view&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+  &lt;span class="n"&gt;showCamera&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;observe&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;viewLivecycleOwner&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt; &lt;span class="n"&gt;event&lt;/span&gt; &lt;span class="p"&gt;-&amp;gt;&lt;/span&gt;
+    &lt;span class="n"&gt;event&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;getContentIfNotHandled&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="o"&gt;?.&lt;/span&gt;&lt;span class="nf"&gt;let&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt; &lt;span class="n"&gt;permission&lt;/span&gt; &lt;span class="p"&gt;-&amp;gt;&lt;/span&gt;
+      &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;permission&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="nf"&gt;startActivity&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nc"&gt;Intent&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nf"&gt;requireContext&lt;/span&gt;&lt;span class="p"&gt;(),&lt;/span&gt; &lt;span class="nc"&gt;CameraActivity&lt;/span&gt;&lt;span class="o"&gt;::&lt;/span&gt;&lt;span class="k"&gt;class&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;java&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+      &lt;span class="p"&gt;}&lt;/span&gt;
+    &lt;span class="p"&gt;}&lt;/span&gt;
+  &lt;span class="p"&gt;}&lt;/span&gt;
+
+  &lt;span class="n"&gt;binding&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;showCameraButton&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;setOnClickListener&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nc"&gt;ContextCompat&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;checkSelfPermission&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;
+        &lt;span class="nf"&gt;requireContext&lt;/span&gt;&lt;span class="p"&gt;(),&lt;/span&gt; 
+        &lt;span class="nc"&gt;Manifest&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;permission&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nc"&gt;CAMERA&lt;/span&gt; &lt;span class="p"&gt;==&lt;/span&gt; &lt;span class="nc"&gt;PackageManager&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nc"&gt;PERMISSION_GRANTED&lt;/span&gt;
+    &lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+      &lt;span class="n"&gt;showCamera&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;value&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="nc"&gt;Event&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="k"&gt;true&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="p"&gt;}&lt;/span&gt; &lt;span class="k"&gt;else&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+      &lt;span class="nf"&gt;requestPermissions&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nf"&gt;arrayOf&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nc"&gt;Manifest&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;permission&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nc"&gt;CAMERA&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="p"&gt;}&lt;/span&gt;
+  &lt;span class="p"&gt;}&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+
+&lt;span class="k"&gt;override&lt;/span&gt; &lt;span class="k"&gt;fun&lt;/span&gt; &lt;span class="nf"&gt;onRequestPermissionsResult&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;
+  &lt;span class="n"&gt;requestCode&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nc"&gt;Int&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+  &lt;span class="n"&gt;permissions&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nc"&gt;Array&lt;/span&gt;&lt;span class="p"&gt;&amp;lt;&lt;/span&gt;&lt;span class="k"&gt;out&lt;/span&gt; &lt;span class="nc"&gt;String&lt;/span&gt;&lt;span class="p"&gt;&amp;gt;,&lt;/span&gt;
+  &lt;span class="n"&gt;grantResults&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nc"&gt;IntArray&lt;/span&gt;
+&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+  &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;requestCode&lt;/span&gt; &lt;span class="p"&gt;==&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt; &lt;span class="p"&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class="n"&gt;grantResults&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;size&lt;/span&gt; &lt;span class="p"&gt;==&lt;/span&gt; &lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="n"&gt;showCamera&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;value&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="nc"&gt;Event&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;grantResults&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="p"&gt;==&lt;/span&gt; &lt;span class="nc"&gt;PackageManager&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nc"&gt;PERMISSION_GRANTED&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+  &lt;span class="p"&gt;}&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Or use a &lt;a href="https://kotlinlang.org/docs/reference/coroutines/channels.html"&gt;Channel&lt;/a&gt;:&lt;/p&gt;
+&lt;div class="language-kotlin highlighter-rouge"&gt;&lt;div class="highlight"&gt;&lt;pre class="highlight"&gt;&lt;code&gt;&lt;span class="k"&gt;private&lt;/span&gt; &lt;span class="kd"&gt;val&lt;/span&gt; &lt;span class="py"&gt;showCamera&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="nc"&gt;Channel&lt;/span&gt;&lt;span class="p"&gt;&amp;lt;&lt;/span&gt;&lt;span class="nc"&gt;Boolean&lt;/span&gt;&lt;span class="p"&gt;&amp;gt;(&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+&lt;span class="k"&gt;override&lt;/span&gt; &lt;span class="k"&gt;fun&lt;/span&gt; &lt;span class="nf"&gt;onViewCreated&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;view&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nc"&gt;View&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;savedInstanceState&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nc"&gt;Bundle&lt;/span&gt;&lt;span class="p"&gt;?)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+  &lt;span class="kd"&gt;val&lt;/span&gt; &lt;span class="py"&gt;binding&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="nc"&gt;MyFragmentBinding&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;bind&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;view&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+  &lt;span class="n"&gt;viewLifecycleOwner&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;lifecycleScope&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;launchWhenStarted&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;permission&lt;/span&gt; &lt;span class="k"&gt;in&lt;/span&gt; &lt;span class="n"&gt;showCamera&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+      &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;permission&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="nf"&gt;startActivity&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nc"&gt;Intent&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nf"&gt;requireContext&lt;/span&gt;&lt;span class="p"&gt;(),&lt;/span&gt; &lt;span class="nc"&gt;CameraActivity&lt;/span&gt;&lt;span class="o"&gt;::&lt;/span&gt;&lt;span class="k"&gt;class&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;java&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+      &lt;span class="p"&gt;}&lt;/span&gt;
+    &lt;span class="p"&gt;}&lt;/span&gt;
+  &lt;span class="p"&gt;}&lt;/span&gt;
+
+  &lt;span class="n"&gt;binding&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;cameraButton&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;setOnClickListener&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nc"&gt;ContextCompat&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;checkSelfPermission&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;
+        &lt;span class="nf"&gt;requireContext&lt;/span&gt;&lt;span class="p"&gt;(),&lt;/span&gt; 
+        &lt;span class="nc"&gt;Manifest&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;permission&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nc"&gt;CAMERA&lt;/span&gt; &lt;span class="p"&gt;==&lt;/span&gt; &lt;span class="nc"&gt;PackageManager&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nc"&gt;PERMISSION_GRANTED&lt;/span&gt;
+    &lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+      &lt;span class="n"&gt;showCamera&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;offer&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="k"&gt;true&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="p"&gt;}&lt;/span&gt; &lt;span class="k"&gt;else&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+      &lt;span class="nf"&gt;requestPermissions&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nf"&gt;arrayOf&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nc"&gt;Manifest&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;permission&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nc"&gt;CAMERA&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="p"&gt;}&lt;/span&gt;
+  &lt;span class="p"&gt;}&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+
+&lt;span class="k"&gt;override&lt;/span&gt; &lt;span class="k"&gt;fun&lt;/span&gt; &lt;span class="nf"&gt;onRequestPermissionsResult&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;
+  &lt;span class="n"&gt;requestCode&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nc"&gt;Int&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+  &lt;span class="n"&gt;permissions&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nc"&gt;Array&lt;/span&gt;&lt;span class="p"&gt;&amp;lt;&lt;/span&gt;&lt;span class="k"&gt;out&lt;/span&gt; &lt;span class="nc"&gt;String&lt;/span&gt;&lt;span class="p"&gt;&amp;gt;,&lt;/span&gt;
+  &lt;span class="n"&gt;grantResults&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nc"&gt;IntArray&lt;/span&gt;
+&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+  &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;requestCode&lt;/span&gt; &lt;span class="p"&gt;==&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt; &lt;span class="p"&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class="n"&gt;grantResults&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;size&lt;/span&gt; &lt;span class="p"&gt;==&lt;/span&gt; &lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="n"&gt;showCamera&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;offer&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;grantResults&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="p"&gt;==&lt;/span&gt; &lt;span class="nc"&gt;PackageManager&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nc"&gt;PERMISSION_GRANTED&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+  &lt;span class="p"&gt;}&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;By scoping your views to &lt;code class="language-plaintext highlighter-rouge"&gt;onViewCreated&lt;/code&gt; you don’t have to worry about nulling
+them out our calling them at the wrong time. And AndroidX gives you the tools
+to do it!&lt;/p&gt;</content><author><name/></author><summary type="html">There’s been a long standing footgun when using fragments on Android because the fragment may live longer than it’s views. Solutions to this have ranged from ignoring the problem to some complicated rxjava setup. However, with the additions to AndroidX this is no longer necessary!</summary></entry><entry><title type="html">Some More Biometric Messes</title><link href="https://evan.tatarka.me/2020/01/29/some-more-biometric-messes.html" rel="alternate" type="text/html" title="Some More Biometric Messes"/><published>2020-01-29T00:00:00+00:00</published><updated>2020-01-29T00:00:00+00:00</updated><id>https://evan.tatarka.me/2020/01/29/some-more-biometric-messes</id><content type="html" xml:base="https://evan.tatarka.me/2020/01/29/some-more-biometric-messes.html">&lt;p&gt;This is a follow-up to &lt;a href="https://evan.tatarka.me/2019/10/01/the-mess-that-is-android-biometrics.html"&gt;The Mess that is Android
+Biometrics&lt;/a&gt;,
+as we found even more wonderful surprises.&lt;/p&gt;
+
+&lt;p&gt;So the &lt;a href="https://developer.android.com/jetpack/androidx/releases/biometric?hl=en#1.0.1"&gt;androidx biometric compat
+lib&lt;/a&gt;
+is out and stable. And it
+(&lt;a href="https://issuetracker.google.com/issues/142150327#comment26"&gt;mostly&lt;/a&gt;)
+blacklists Samsung devices so they are forced to use fingerprint. We can plop
+it in and all our woes are gone right? &lt;em&gt;Sigh&lt;/em&gt;, I guess you can see where this
+is going. I wouldn’t be writing another blog post otherwise.&lt;/p&gt;
+
+&lt;p&gt;When the user enables biometrics in our app, we show the biometrics prompt.
+While is not strictly necessary, it is a nice assurance to the user that it’s
+working correctly. Well it turns out that while the blacklist solved the
+Samsung issue on login, it did &lt;em&gt;not&lt;/em&gt; solve it for this prompt. This lead to an
+interesting concept about android’s biometrics implementation that’s not really
+called out anywhere in the documentation.&lt;/p&gt;
+
+&lt;h2 id="wait-not-all-biometrics-are-supposed-to-be-secure"&gt;Wait, not all biometrics are supposed to be secure?&lt;/h2&gt;
+
+&lt;p&gt;Android actually supports &lt;em&gt;two&lt;/em&gt; forms of biometrics: secure and insecure.
+Secure biometrics pass a certain level of &lt;a href="https://source.android.com/security/biometric/measure"&gt;security
+requirements&lt;/a&gt; which
+allows them to unlock encryption keys. Insecure biometrics… do not. What’s
+the point in prompting for insecure biometrics that can’t be used for
+encryption? Who knows? I guess security theater could be important to somebody.
+Well when we were showing the prompt to enable biometrics we were not passing
+in a cipher as we didn’t need one. Unfortunately, this means that insecure
+biometrics are allowed and so it doesn’t use the blacklist. So lesson learned:
+&lt;em&gt;always&lt;/em&gt; pass in the cipher when showing the prompt to get a consistent
+experience.&lt;/p&gt;
+
+&lt;h2 id="did-anyone-know-this"&gt;Did anyone know this?&lt;/h2&gt;
+
+&lt;p&gt;It seems like even the people who created the biometircs api didn’t realize
+this. We got &lt;code class="language-plaintext highlighter-rouge"&gt;BiometricManager.canAuthenticate()&lt;/code&gt; in api 29, but this method
+does not distinguish between secure and insecure biometrics. So if you are
+using biometrics for it’s intended purpose, it’s useless. Luckily, there is
+another way. If you try to set up a key when the user has no secure biometrics
+enrolled it’ll throw an exception.&lt;/p&gt;
+
+&lt;div class="language-kotlin highlighter-rouge"&gt;&lt;div class="highlight"&gt;&lt;pre class="highlight"&gt;&lt;code&gt;&lt;span class="k"&gt;fun&lt;/span&gt; &lt;span class="nf"&gt;canSecurelyAuthenticate&lt;/span&gt;&lt;span class="p"&gt;():&lt;/span&gt; &lt;span class="nc"&gt;Boolean&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="k"&gt;try&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="kd"&gt;val&lt;/span&gt; &lt;span class="py"&gt;keystore&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="nc"&gt;KeyStore&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;getInstance&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;"AndroidKeyStore"&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="nc"&gt;KeyGenerator&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;getInstance&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;"AES"&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;keystore&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;provider&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    	    &lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;init&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;
+    		    &lt;span class="nc"&gt;KeyGenParameterSpec&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nc"&gt;Builder&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;"DUMMY_KEY_ALIAS"&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nc"&gt;KeyProperties&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nc"&gt;PURPOSE_DECRYPT&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    			    &lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;setUserAuthenticationRequired&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="k"&gt;true&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    			    &lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;build&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+    	    &lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="k"&gt;true&lt;/span&gt;
+    &lt;span class="p"&gt;}&lt;/span&gt; &lt;span class="k"&gt;catch&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;e&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nc"&gt;InvalidAlgorithmParameterException&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="c1"&gt;// expected error if user isn't enrolled in secure biometrics&lt;/span&gt;
+        &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="k"&gt;false&lt;/span&gt;
+    &lt;span class="p"&gt;}&lt;/span&gt; &lt;span class="k"&gt;catch&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;e&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nc"&gt;Exception&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="c1"&gt;// Log unexpected errors, though if there's an issue with the keystore we probably can't use&lt;/span&gt;
+        &lt;span class="c1"&gt;// biometrics anyway.&lt;/span&gt;
+        &lt;span class="nc"&gt;Log&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;w&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;"keystore error"&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;e&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="k"&gt;false&lt;/span&gt;
+    &lt;span class="p"&gt;}&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h2 id="what-now"&gt;What now?&lt;/h2&gt;
+
+&lt;p&gt;A feature request has been
+&lt;a href="https://issuetracker.google.com/issues/147423828"&gt;filed&lt;/a&gt; for having a secure
+form of &lt;code class="language-plaintext highlighter-rouge"&gt;BiometricMnager.canAuthenticate()&lt;/code&gt;. It appears that the necessary api
+will be available in Android 11 and hopefully there will be some androidx
+workaround. In the meantime, I’ve been maintaining a &lt;a href="https://github.com/evant/android-biometrics-compat-issue"&gt;sample
+repo&lt;/a&gt; that collects
+all the workarounds necessary for getting biometrics to work correctly.&lt;/p&gt;</content><author><name/></author><summary type="html">This is a follow-up to The Mess that is Android Biometrics, as we found even more wonderful surprises.</summary></entry><entry><title type="html">The Mess that is Android Biometrics</title><link href="https://evan.tatarka.me/2019/10/01/the-mess-that-is-android-biometrics.html" rel="alternate" type="text/html" title="The Mess that is Android Biometrics"/><published>2019-10-01T00:00:00+00:00</published><updated>2019-10-01T00:00:00+00:00</updated><id>https://evan.tatarka.me/2019/10/01/the-mess-that-is-android-biometrics</id><content type="html" xml:base="https://evan.tatarka.me/2019/10/01/the-mess-that-is-android-biometrics.html">&lt;p&gt;Oh FingerprintManager is deprecated? It’s replaced with this new thing
+BiometricPrompt that comes with it’s own UI and supports a wider range of
+biometrics? There’s even an &lt;a href="https://developer.android.com/jetpack/androidx/releases/biometric"&gt;androidx
+library&lt;/a&gt;
+that does the compatibility work for you? This will be easy! HAHAHAHHAHHAHA&lt;/p&gt;
+
+&lt;p&gt;This is the story of all the pain I’ve run into with implementing
+BiometricPrompt so you don’t have to.&lt;/p&gt;
+
+&lt;p&gt;If you just want a recommendation for today, it would be: Use
+FingerprintManager on Android 9, use BiometricPrompt on Android 10, throw in a
+few hacks for a better user experience, and cross your fingers and hope for the
+best.&lt;/p&gt;
+
+&lt;h2 id="the-beginning"&gt;The beginning&lt;/h2&gt;
+
+&lt;p&gt;It all started back in 2018, fresh off the google I/O hype train. I decided to
+look into this new BiometricPrompt thing. It looked easy to implement and came
+with an androidx lib in alpha that seemed to work alright. So I went ahead and
+implemented a rough POC in my project, demoed to our product owner on a Pixel 1
+and everything looked great. “That was easy”, I thought. Little did I know what
+was to come.&lt;/p&gt;
+
+&lt;h2 id="the-cracks-start-to-show"&gt;The cracks start to show&lt;/h2&gt;
+
+&lt;p&gt;Done with the happy path, I went on to implement the error handling. Making
+sure all was well, I made sure to test on both the BiometricPrompt and
+FingerprintManager paths. Unfortunately, I noticed some major differences on
+how things were handled such as cases where the user was locked out because of
+too many fingerprint attempts. Before Android 9 it would show the dialog with
+the error, but on Android 9 it would show nothing. “No worries”, I thought. The
+lib was in alpha. I filled a bug and put in a work-around.&lt;/p&gt;
+
+&lt;p&gt;With BiometricPrompt I also noticed that there could be several seconds between
+when asking to show the dialog and when it actually showed or an error was
+returned. I worked around this by adding in a loading indicator in the ui. But
+when to stop showing it? There’s no callback when the BiometricPrompt is
+actually shown and no lifecycle events are fired. Eventually, I found out that
+the window loses focus when the prompt is shown. So with one
+&lt;code class="language-plaintext highlighter-rouge"&gt;OnWindowFocusChangeListener&lt;/code&gt; later I got that fixed.&lt;/p&gt;
+
+&lt;p&gt;Given that biometrics is an optional feature for our users, naturally we’d want
+a way to detect that they have it enabled. Well apparently nobody at Google
+thought of that as they went ahead and deprecated
+&lt;code class="language-plaintext highlighter-rouge"&gt;FingerprintManager.hasEnrolledFingerprints()&lt;/code&gt; without providing a replacement.
+But no phone out there &lt;em&gt;actually&lt;/em&gt; uses any other authentication besides
+fingerprint right? So went ahead using that deprecated method (stay tuned).&lt;/p&gt;
+
+&lt;p&gt;Everything seemed fine until I got a bug from QA. Sometimes the prompt wasn’t
+showing, only on Android 9 of course. I was confused, we show it in &lt;code class="language-plaintext highlighter-rouge"&gt;onResume()&lt;/code&gt;,
+no complicated logic there. Well it turns out that’s not good enough for
+BiometricPrompt. From what I can only assume was to prevent from showing when
+the app is in the background, if your window doesn’t have focus, the call will
+simply be ignored. Furthermore, in the &lt;code class="language-plaintext highlighter-rouge"&gt;onResume()&lt;/code&gt; callback, your window will
+only sometimes have focus because having a consistent callback ordering in
+android would be boring. Solution: another OnWindowFocusChangeListener then.
+&lt;em&gt;Sigh&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;The implementation wasn’t as pretty now, but hey nothing that couldn’t be
+worked-around. Everything looked good and we shipped with our shiny new
+biometric prompt.&lt;/p&gt;
+
+&lt;h2 id="enter-our-good-friend-take-one-guess-spoiler-its-samsung"&gt;Enter our good friend (take one guess, spoiler it’s Samsung)&lt;/h2&gt;
+
+&lt;p&gt;Not too long after we shipped, Samsung finally got around to updating their
+phones to Android 9. Now if you weren’t aware (I wasn’t) these phones had this
+nifty ‘feature’ where you could unlock your phone with your face or iris. Now
+you may be thinking, “hey this doesn’t sound all that secure.” Well guess what?
+&lt;a href="https://www.forbes.com/sites/amitchowdhry/2017/03/31/samsung-acknowledges-galaxy-s8-facial-recognition-security-limitations/#32d9d0ed1aff"&gt;It&lt;/a&gt;
+&lt;a href="https://arstechnica.com/information-technology/2017/05/breaking-the-iris-scanner-locking-samsungs-galaxy-s8-is-laughably-easy/"&gt;isn’t!&lt;/a&gt;
+That would be ok if it was only contained as an OS feature and didn’t affect
+app api’s, but this is Samsung we’re talking about. Mucking with api’s is their
+expertise. In their infinite wisdom they decided to update the stock biometric
+prompt work with face/iris. So now we have two wonderful issues:&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;&lt;code class="language-plaintext highlighter-rouge"&gt;FingerprintManager.hasEnrolledFingerprints()&lt;/code&gt; might not be right anymore. If
+the user has face/iris enrolled but no fingerprints, it’ll return false. If
+they have both it’ll return true, but show the face/iris unlock for the
+dialog. And of course we don’t have any other api to use instead.&lt;/li&gt;
+  &lt;li&gt;Now this one is a &lt;a href="https://issuetracker.google.com/issues/123997468"&gt;doozy&lt;/a&gt;.
+You know how I mentioned that these methods weren’t secure? Well the system
+correctly realizes this and refuses to decrypt the key for you when using
+face. So you prompt the user to authenticate with biometrics, they
+authenticate with their face, and boom! You get a SignatureException. Of
+course there’s no way to know which biometrics the user has enabled, so you
+are screwed.&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;Well the bad user reviews were coming in and we needed to figure out how to fix
+this quick. There’s no easy workaround we can add this time. So we did the next
+best thing: copy all of androidx biometric into our app and hard-code it to use
+the stock FingerprintManager implementation. And that’s where things stand
+today.&lt;/p&gt;
+
+&lt;h2 id="a-hope-for-the-future"&gt;A hope for the future?&lt;/h2&gt;
+
+&lt;p&gt;So here we are, using a compat lib but not really. We could’ve stuck with
+FingerprintManager and ignored all of this mess. However, Android 10 did just
+came out, and there’s been some improvements in the androidx lib, maybe there’s
+hope?&lt;/p&gt;
+
+&lt;p&gt;For one Android 10 did finally add a replacement to
+&lt;code class="language-plaintext highlighter-rouge"&gt;FingerprintManager.hasEnrolledFingerprints()&lt;/code&gt; in the form of
+&lt;code class="language-plaintext highlighter-rouge"&gt;BiometricManager.canAuthenticate()&lt;/code&gt;. Unfortunately that won’t help us on Android 9.
+They also tightened the CTS (compatibly test suite) around this so with any
+luck the Samsung issues will get fixed when they update to 10. Finally, they
+seem to be &lt;a href="https://issuetracker.google.com/issues/129937212"&gt;receptive&lt;/a&gt; to add
+some sort of work-around for the Samsung issue in the androidx lib. And with
+the Pixel 4 around the corner which is rumored on only have face unlock, this
+is good. As it stands today, we aren’t quite at the place we can drop something
+in and call it a day, but we are a bit closer.&lt;/p&gt;</content><author><name/></author><summary type="html">Oh FingerprintManager is deprecated? It’s replaced with this new thing BiometricPrompt that comes with it’s own UI and supports a wider range of biometrics? There’s even an androidx library that does the compatibility work for you? This will be easy! HAHAHAHHAHHAHA</summary></entry><entry><title type="html">Random musing on Jetpack Compose</title><link href="https://evan.tatarka.me/2019/05/08/random-musing-on-jetpack-compose.html" rel="alternate" type="text/html" title="Random musing on Jetpack Compose"/><published>2019-05-08T00:00:00+00:00</published><updated>2019-05-08T00:00:00+00:00</updated><id>https://evan.tatarka.me/2019/05/08/random-musing-on-jetpack-compose</id><content type="html" xml:base="https://evan.tatarka.me/2019/05/08/random-musing-on-jetpack-compose.html">&lt;p&gt;&lt;a href="https://developer.android.com/jetpack/compose"&gt;Compose&lt;/a&gt; is a new
+reactive-style ui framework for android. After poking around in the source
+code, there are some interesting architectural decisions I would like to
+highlight:&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;It is actually quite ambitious, instead of binding to TextView etc, it is
+laying out and rendering the ui itself. There will be interoperability with
+existing views but it represents a whole to way to render ui on android.&lt;/li&gt;
+  &lt;li&gt;It’s completely written in kotlin using the kotlin compiler plugin api. I
+don’t believe there will be a way to define your ui using java with this.
+Yet another reason to advocate for kotlin for android apps!&lt;/li&gt;
+  &lt;li&gt;The android parts are completely abstracted out. This means testing ui is
+going to potentially be very easy. It also means that there’s no reason this
+couldn’t be made to work on iOS with kotlin native. I doubt it’s on anyone’s
+roadmap but it’s certainly an interesting idea.&lt;/li&gt;
+  &lt;li&gt;The syntax is more ‘magical’ than other reactive frameworks. Instead of
+returning your ui, you construct it by calling functions that are annotated
+with &lt;code class="language-plaintext highlighter-rouge"&gt;@Composable&lt;/code&gt;. State is updated by either annotating values with
+&lt;code class="language-plaintext highlighter-rouge"&gt;@Model&lt;/code&gt;. Or by wrapping them in a &lt;code class="language-plaintext highlighter-rouge"&gt;state {}&lt;/code&gt; function to create a delegate.
+Opinions may very on if they went too far, but I’m personally a fan.&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;div class="language-kotlin highlighter-rouge"&gt;&lt;div class="highlight"&gt;&lt;pre class="highlight"&gt;&lt;code&gt;&lt;span class="nd"&gt;@Composable&lt;/span&gt;
+&lt;span class="k"&gt;fun&lt;/span&gt; &lt;span class="nf"&gt;CustomRadioGroup&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="kd"&gt;val&lt;/span&gt; &lt;span class="py"&gt;radioOptions&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="nf"&gt;listOf&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;"Disagree"&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;"Neutral"&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;"Agree"&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="kd"&gt;var&lt;/span&gt; &lt;span class="py"&gt;selectedOption&lt;/span&gt; &lt;span class="k"&gt;by&lt;/span&gt; &lt;span class="p"&gt;+&lt;/span&gt;&lt;span class="nf"&gt;state&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt; &lt;span class="n"&gt;radioOptions&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="p"&gt;}&lt;/span&gt;
+    &lt;span class="kd"&gt;val&lt;/span&gt; &lt;span class="py"&gt;textStyle&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="p"&gt;+&lt;/span&gt;&lt;span class="nf"&gt;themeTextStyle&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt; &lt;span class="n"&gt;subtitle1&lt;/span&gt; &lt;span class="p"&gt;}&lt;/span&gt;
+
+    &lt;span class="nc"&gt;RadioGroup&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="nc"&gt;Row&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;mainAxisSize&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="nc"&gt;MainAxisSize&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nc"&gt;Min&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+            &lt;span class="n"&gt;radioOptions&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;forEach&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt; &lt;span class="n"&gt;text&lt;/span&gt; &lt;span class="p"&gt;-&amp;gt;&lt;/span&gt;
+                &lt;span class="kd"&gt;val&lt;/span&gt; &lt;span class="py"&gt;selected&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="n"&gt;text&lt;/span&gt; &lt;span class="p"&gt;==&lt;/span&gt; &lt;span class="n"&gt;selectedOption&lt;/span&gt;
+                &lt;span class="nc"&gt;RadioGroupItem&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;
+                    &lt;span class="n"&gt;selected&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="n"&gt;selected&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+                    &lt;span class="n"&gt;onSelected&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt; &lt;span class="n"&gt;selectedOption&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="n"&gt;text&lt;/span&gt; &lt;span class="p"&gt;})&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+                    &lt;span class="nc"&gt;Padding&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;padding&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;10&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;dp&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+                        &lt;span class="nc"&gt;Column&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+                            &lt;span class="nc"&gt;RadioButton&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;selected&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="n"&gt;selected&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+                            &lt;span class="nc"&gt;Text&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;text&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="n"&gt;text&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;style&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="n"&gt;textStyle&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+                        &lt;span class="p"&gt;}&lt;/span&gt;
+                    &lt;span class="p"&gt;}&lt;/span&gt;
+                &lt;span class="p"&gt;}&lt;/span&gt;
+            &lt;span class="p"&gt;}&lt;/span&gt;
+        &lt;span class="p"&gt;}&lt;/span&gt;
+    &lt;span class="p"&gt;}&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;</content><author><name/></author><summary type="html">Compose is a new reactive-style ui framework for android. After poking around in the source code, there are some interesting architectural decisions I would like to highlight:</summary></entry></feed>
